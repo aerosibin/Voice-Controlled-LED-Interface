@@ -1,7 +1,6 @@
 streamlit
-streamlit_audiorecorder
-scipy
 transformers
 torch
 serial
-numpy
+pydub
+ffmpeg
