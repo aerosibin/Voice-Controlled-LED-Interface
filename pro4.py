@@ -1,24 +1,21 @@
 # /// script
 # dependencies = [
 #   "streamlit",
-#   "streamlit-audiorecorder",
-#   "scipy",
 #   "transformers",
 #   "torch",
 #   "serial",
-#   "numpy",
+#   "pydub",
+#   "ffmpeg",
 # ]
 # ///
 
-
 import streamlit as st
-from streamlit_audiorecorder import st_audiorec
-import scipy.io.wavfile as wav
 from transformers import pipeline
 import serial.tools.list_ports
 import serial
+from pydub import AudioSegment
+from pydub.playback import play
 import os
-import numpy as np
 
 # Streamlit app title
 st.title("Voice-Controlled LED Interface")
@@ -56,39 +53,15 @@ if st.sidebar.button("Disconnect"):
     else:
         st.sidebar.warning("No active connection to close.")
 
-# Define function to process the audio file
-def save_audio(audio_data, sample_rate, file_name):
-    with wave.open(file_name, 'wb') as wf:
-        wf.setnchannels(1)  # Mono audio
-        wf.setsampwidth(2)  # 2 bytes per sample
-        wf.setframerate(sample_rate)
-        wf.writeframes(audio_data)
-
-# Function to capture and process voice
-def capture_voice():
+# Function to process voice input
+@st.cache_data
+def process_audio(audio_file):
     whisper = pipeline("automatic-speech-recognition", model="openai/whisper-medium", device=0)
-    sample_rate = 16000
-    file_name = "live_audio.wav"
     try:
-        st.info("Recording...")
-
-        # Record audio using st_audiorec from streamlit-audiorecorder
-        audio_bytes = st_audiorec()
-        if audio_bytes is not None:
-            wav.write(file_name, sample_rate, audio_bytes)
-            st.success("Recording complete.")
-
-        else:
-            st.error("No audio recorded.")
-            return None
-
-    except Exception as e:
-        st.error(f"Error during recording: {e}")
-        return None
-
-    try:
-        result = whisper(file_name)
-        os.remove(file_name)  # Cleanup audio file after processing
+        audio = AudioSegment.from_file(audio_file)
+        audio.export("temp.wav", format="wav")
+        result = whisper("temp.wav")
+        os.remove("temp.wav")  # Cleanup audio file after processing
         return result["text"].lower()
     except Exception as e:
         st.error(f"Error during processing: {e}")
@@ -104,24 +77,23 @@ def send_command(command):
 
 # Main interface
 st.header("Voice Command")
-if st.button("Record Voice"):
-    text = capture_voice()
-    if text:
-        st.write(f"Recognized Text: {text}")
-        if "red" in text:
-            send_command("red")
-        elif "green" in text:
-            send_command("green")
-        elif "blue" in text:
-            send_command("blue")
-        elif "off" in text:
-            send_command("off")
-        elif "exit" in text:
-            st.warning("Exiting program...")
-            if st.session_state.serial_inst.is_open:
-                st.session_state.serial_inst.close()
-        else:
-            st.error("Command not recognized. Please say red, green, blue, or off.")
+audio_file = st.file_uploader("Upload an audio file", type=["wav", "mp3"])
+if audio_file is not None:
+    st.audio(audio_file, format="audio/wav")
+    if st.button("Process Voice Command"):
+        text = process_audio(audio_file)
+        if text:
+            st.write(f"Recognized Text: {text}")
+            if "red" in text:
+                send_command("red")
+            elif "green" in text:
+                send_command("green")
+            elif "blue" in text:
+                send_command("blue")
+            elif "off" in text:
+                send_command("off")
+            else:
+                st.error("Command not recognized. Please say red, green, blue, or off.")
 
 st.header("Manual Command Control")
 col1, col2, col3, col4 = st.columns(4)
