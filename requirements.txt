@@ -1,6 +1,6 @@
 streamlit
 transformers
 torch
-serial
+pyserial
 pydub
 ffmpeg
