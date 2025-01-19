@@ -1,7 +1,7 @@
 # /// script
 # dependencies = [
 #   "streamlit",
-#   "sounddevice",
+#   "streamlit-webrtc",
 #   "scipy",
 #   "transformers",
 #   "torch",
@@ -10,12 +10,12 @@
 # ///
 
 import streamlit as st
-import sounddevice as sd
-import scipy.io.wavfile as wav
+from streamlit_webrtc import webrtc_streamer, WebRtcMode, ClientSettings
 from transformers import pipeline
 import serial.tools.list_ports
 import serial
 import os
+import wave
 
 # Streamlit app title
 st.title("Voice-Controlled LED Interface")
@@ -53,27 +53,20 @@ if st.sidebar.button("Disconnect"):
     else:
         st.sidebar.warning("No active connection to close.")
 
-# Function to capture and process voice
-def capture_voice():
-    whisper = pipeline("automatic-speech-recognition", model="openai/whisper-medium", device=0)
+# Whisper pipeline for speech recognition
+whisper = pipeline("automatic-speech-recognition", model="openai/whisper-medium", device=0)
 
-    duration = 5  # seconds
-    sample_rate = 16000
-    file_name = "live_audio.wav"
-
+# Function to process audio frames
+def process_audio(frames):
+    audio_file = "live_audio.wav"
+    with wave.open(audio_file, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(16000)
+        wf.writeframes(b"".join(frames))
     try:
-        st.info("Recording for 5 seconds...")
-        audio = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1, dtype="float32")
-        sd.wait()
-        wav.write(file_name, sample_rate, audio)
-        st.success("Recording complete.")
-    except Exception as e:
-        st.error(f"Error during recording: {e}")
-        return None
-
-    try:
-        result = whisper(file_name)
-        os.remove(file_name)  # Cleanup audio file after processing
+        result = whisper(audio_file)
+        os.remove(audio_file)  # Cleanup audio file after processing
         return result["text"].lower()
     except Exception as e:
         st.error(f"Error during processing: {e}")
@@ -89,24 +82,43 @@ def send_command(command):
 
 # Main interface
 st.header("Voice Command")
-if st.button("Record Voice"):
-    text = capture_voice()
-    if text:
-        st.write(f"Recognized Text: {text}")
-        if "red" in text:
-            send_command("red")
-        elif "green" in text:
-            send_command("green")
-        elif "blue" in text:
-            send_command("blue")
-        elif "off" in text:
-            send_command("off")
-        elif "exit" in text:
-            st.warning("Exiting program...")
-            if st.session_state.serial_inst.is_open:
-                st.session_state.serial_inst.close()
-        else:
-            st.error("Command not recognized. Please say red, green, blue, or off.")
+frames_collected = []
+
+# WebRTC audio streaming for live voice input
+webrtc_ctx = webrtc_streamer(
+    key="voice-control",
+    mode=WebRtcMode.SENDONLY,
+    client_settings=ClientSettings(
+        rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
+        media_stream_constraints={"audio": True, "video": False},
+    ),
+)
+
+if webrtc_ctx and webrtc_ctx.state.playing:
+    audio_frame = webrtc_ctx.audio_receiver
+    if audio_frame:
+        frames_collected.append(audio_frame.to_ndarray().tobytes())
+
+    if len(frames_collected) >= 16000 * 5:  # Collect 5 seconds of audio
+        st.info("Processing voice command...")
+        recognized_text = process_audio(frames_collected)
+        frames_collected.clear()  # Reset frames
+        if recognized_text:
+            st.write(f"Recognized Text: {recognized_text}")
+            if "red" in recognized_text:
+                send_command("red")
+            elif "green" in recognized_text:
+                send_command("green")
+            elif "blue" in recognized_text:
+                send_command("blue")
+            elif "off" in recognized_text:
+                send_command("off")
+            elif "exit" in recognized_text:
+                st.warning("Exiting program...")
+                if st.session_state.serial_inst.is_open:
+                    st.session_state.serial_inst.close()
+            else:
+                st.error("Command not recognized. Please say red, green, blue, or off.")
 
 st.header("Manual Command Control")
 col1, col2, col3, col4 = st.columns(4)
