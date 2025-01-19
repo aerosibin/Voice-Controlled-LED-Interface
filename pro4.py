@@ -1,7 +1,7 @@
 # /// script
 # dependencies = [
 #   "streamlit",
-#   "streamlit-webrtc",
+#   "streamlit-audiorecorder",
 #   "scipy",
 #   "transformers",
 #   "torch",
@@ -12,7 +12,7 @@
 
 
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, WebRtcMode, AudioProcessorBase
+from streamlit_audiorecorder import st_audiorec
 import scipy.io.wavfile as wav
 from transformers import pipeline
 import serial.tools.list_ports
@@ -56,18 +56,7 @@ if st.sidebar.button("Disconnect"):
     else:
         st.sidebar.warning("No active connection to close.")
 
-# Define AudioProcessor to record and save audio
-class AudioRecorder(AudioProcessorBase):
-    def __init__(self):
-        self.audio_data = []
-
-    def recv_audio(self, frames):
-        self.audio_data.extend(frames)
-        return frames
-
-    def get_audio(self):
-        return np.array(self.audio_data)
-
+# Define function to process the audio file
 def save_audio(audio_data, sample_rate, file_name):
     with wave.open(file_name, 'wb') as wf:
         wf.setnchannels(1)  # Mono audio
@@ -81,26 +70,17 @@ def capture_voice():
     sample_rate = 16000
     file_name = "live_audio.wav"
     try:
-        st.info("Recording for 5 seconds...")
+        st.info("Recording...")
 
-        webrtc_ctx = webrtc_streamer(
-            key="audio-recorder",
-            mode=WebRtcMode.SENDRECV,
-            audio_receiver_size=256,
-            media_stream_constraints={"audio": True},
-            rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
-            audio_processor_factory=AudioRecorder,
-        )
-
-        if webrtc_ctx.audio_processor:
-            st.warning("Recording... Please wait.")
-            audio_recorder = webrtc_ctx.audio_processor
-            st.time.sleep(5)  # Record for 5 seconds
-            raw_audio = audio_recorder.get_audio()
-            save_audio(raw_audio.tobytes(), sample_rate, file_name)
+        # Record audio using st_audiorec from streamlit-audiorecorder
+        audio_bytes = st_audiorec()
+        if audio_bytes is not None:
+            wav.write(file_name, sample_rate, audio_bytes)
             st.success("Recording complete.")
+
         else:
-            st.error("Audio recorder not initialized.")
+            st.error("No audio recorded.")
+            return None
 
     except Exception as e:
         st.error(f"Error during recording: {e}")
