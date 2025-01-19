@@ -1,6 +1,6 @@
 streamlit
-streamlit-webrtc
+sounddevice
 scipy
-transformers
 torch
+transformers
 pyserial
