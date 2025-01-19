@@ -10,7 +10,7 @@
 # ///
 
 import streamlit as st
-import sounddevice as sd
+from audio_recorder_streamlit import audio_recorder
 import scipy.io.wavfile as wav
 from transformers import pipeline
 import serial.tools.list_ports
@@ -56,15 +56,12 @@ if st.sidebar.button("Disconnect"):
 # Function to capture and process voice
 def capture_voice():
     whisper = pipeline("automatic-speech-recognition", model="openai/whisper-medium", device=0)
-
-    duration = 5  # seconds
     sample_rate = 16000
     file_name = "live_audio.wav"
-
     try:
         st.info("Recording for 5 seconds...")
-        audio = sd.rec(int(duration * sample_rate), samplerate=sample_rate, channels=1, dtype="float32")
-        sd.wait()
+        audio_bytes = audio_recorder(energy_threshold=(-1.0, 1.0), pause_threshold=5.0)
+        audio = st.audio(audio_bytes, format="audio/wav")
         wav.write(file_name, sample_rate, audio)
         st.success("Recording complete.")
     except Exception as e:
