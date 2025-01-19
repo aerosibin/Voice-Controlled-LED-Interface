@@ -7,12 +7,17 @@ This project enables you to control an RGB LED using voice commands or manual in
 - **Voice Control**: Use commands like "red," "green," "blue," or "off" to control the RGB LED.
 - **Manual Control**: A set of buttons on the interface allows manual control of the LED.
 - **Arduino Integration**: Upload the provided `.ino` file to your Arduino to set up serial communication with the system.
-- **Web-Based Access**: The app is deployed online for easy access.
+- **Web-Based Access**: The app is designed for local use with Streamlit, and cannot be deployed to the Streamlit Cloud due to the requirement to list and connect to serial ports.
 
-## Access the Application
+## Usage
 
-You can access the application directly through this link:  
-**[Streamlit App](https://your-streamlit-app-link.streamlit.app)**
+To run the app locally, use the following command in your terminal:
+
+```bash
+streamlit run pro4.py```
+
+### Note:
+Since the application requires access to serial ports to communicate with the Arduino, it cannot be deployed on Streamlit Cloud or other cloud environments that restrict access to hardware ports.
 
 ## Prerequisites
 
