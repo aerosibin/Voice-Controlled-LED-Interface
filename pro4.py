@@ -1,3 +1,14 @@
+# /// script
+# dependencies = [
+#   "streamlit",
+#   "sounddevice",
+#   "scipy",
+#   "transformers",
+#   "torch",
+#   "serial",
+# ]
+# ///
+
 import streamlit as st
 import sounddevice as sd
 import scipy.io.wavfile as wav
