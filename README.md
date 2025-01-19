@@ -13,8 +13,8 @@ This project enables you to control an RGB LED using voice commands or manual in
 
 To run the app locally, use the following command in your terminal:
 
-```bash
-streamlit run pro4.py```
+'''bash
+streamlit run pro4.py'''
 
 ### Note:
 Since the application requires access to serial ports to communicate with the Arduino, it cannot be deployed on Streamlit Cloud or other cloud environments that restrict access to hardware ports.
