@@ -1,7 +1,6 @@
 # /// script
 # dependencies = [
 #   "streamlit",
-#   "sounddevice",
 #   "scipy",
 #   "transformers",
 #   "torch",
@@ -10,12 +9,13 @@
 # ///
 
 import streamlit as st
-from audio_recorder_streamlit import audio_recorder
+from streamlit_webrtc import webrtc_streamer, WebRtcMode, AudioProcessorBase
 import scipy.io.wavfile as wav
 from transformers import pipeline
 import serial.tools.list_ports
 import serial
 import os
+import numpy as np
 
 # Streamlit app title
 st.title("Voice-Controlled LED Interface")
@@ -53,6 +53,25 @@ if st.sidebar.button("Disconnect"):
     else:
         st.sidebar.warning("No active connection to close.")
 
+# Define AudioProcessor to record and save audio
+class AudioRecorder(AudioProcessorBase):
+    def __init__(self):
+        self.audio_data = []
+
+    def recv_audio(self, frames):
+        self.audio_data.extend(frames)
+        return frames
+
+    def get_audio(self):
+        return np.array(self.audio_data)
+
+def save_audio(audio_data, sample_rate, file_name):
+    with wave.open(file_name, 'wb') as wf:
+        wf.setnchannels(1)  # Mono audio
+        wf.setsampwidth(2)  # 2 bytes per sample
+        wf.setframerate(sample_rate)
+        wf.writeframes(audio_data)
+
 # Function to capture and process voice
 def capture_voice():
     whisper = pipeline("automatic-speech-recognition", model="openai/whisper-medium", device=0)
@@ -60,10 +79,26 @@ def capture_voice():
     file_name = "live_audio.wav"
     try:
         st.info("Recording for 5 seconds...")
-        audio_bytes = audio_recorder(energy_threshold=(-1.0, 1.0), pause_threshold=5.0)
-        audio = st.audio(audio_bytes, format="audio/wav")
-        wav.write(file_name, sample_rate, audio)
-        st.success("Recording complete.")
+
+        webrtc_ctx = webrtc_streamer(
+            key="audio-recorder",
+            mode=WebRtcMode.SENDRECV,
+            audio_receiver_size=256,
+            media_stream_constraints={"audio": True},
+            rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
+            audio_processor_factory=AudioRecorder,
+        )
+
+        if webrtc_ctx.audio_processor:
+            st.warning("Recording... Please wait.")
+            audio_recorder = webrtc_ctx.audio_processor
+            st.time.sleep(5)  # Record for 5 seconds
+            raw_audio = audio_recorder.get_audio()
+            save_audio(raw_audio.tobytes(), sample_rate, file_name)
+            st.success("Recording complete.")
+        else:
+            st.error("Audio recorder not initialized.")
+
     except Exception as e:
         st.error(f"Error during recording: {e}")
         return None
