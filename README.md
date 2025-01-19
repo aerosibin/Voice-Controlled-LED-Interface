@@ -94,5 +94,5 @@ Developed with ❤️ for LED enthusiasts.
 ### Contributors
 
 - [Sibin Paulraj](https://github.com/aerosibin)
-- [Naren Kumar)[https://github.com/narenkumarchandran)
+- [Naren Kumar](https://github.com/narenkumarchandran)
 - [Varsha Pillai](https://github.com/varsha-2024-snu)
