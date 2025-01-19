@@ -1,6 +1,6 @@
 streamlit
+sounddevice
+scipy
 transformers
 torch
 pyserial
-pydub
-ffmpeg
