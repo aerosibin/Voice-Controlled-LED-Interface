@@ -90,3 +90,9 @@ This project is licensed under the [MIT License](LICENSE).
 This project leverages the power of AI and Streamlit for an innovative interface. Special thanks to Hugging Face for the speech recognition model.
 
 Developed with ❤️ for LED enthusiasts.
+
+### Contributors
+
+- [Sibin Paulraj](https://github.com/aerosibin)
+- [Naren Kumar)[https://github.com/narenkumarchandran)
+- [Varsha Pillai](https://github.com/varsha-2024-snu)
