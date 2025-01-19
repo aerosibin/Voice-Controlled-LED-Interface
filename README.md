@@ -77,6 +77,7 @@ Since the application requires access to serial ports to communicate with the Ar
 - [Transformers](https://huggingface.co/transformers/)
 - [PySerial](https://pyserial.readthedocs.io/)
 - [SciPy](https://www.scipy.org/)
+- [PyTorch](https://pytorch.org/)
 
 ## License
 
